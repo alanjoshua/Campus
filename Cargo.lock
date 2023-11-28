@@ -7,6 +7,7 @@ name = "Vulkan"
 version = "0.1.0"
 dependencies = [
  "vulkano",
+ "vulkano-shaders",
 ]
 
 [[package]]
@@ -73,10 +74,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.0.83"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "cmake"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
+dependencies = [
+ "cc",
+]
 
 [[package]]
 name = "core-foundation"
@@ -348,6 +367,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
+name = "roxmltree"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "921904a62e410e37e215c40381b7117f830d9d89ba60ab5236170541dd25646b"
+dependencies = [
+ "xmlparser",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -388,6 +416,27 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "shaderc"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31cef52787a0db5108788ea20bed13d6bf4b96287c5c5201e55725f7070f3443"
+dependencies = [
+ "libc",
+ "shaderc-sys",
+]
+
+[[package]]
+name = "shaderc-sys"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e8f8439fffcffd6efcd74197204addf935dbab5752696bd990a6cd36d54cf64"
+dependencies = [
+ "cmake",
+ "libc",
+ "roxmltree",
 ]
 
 [[package]]
@@ -509,6 +558,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "vulkano-shaders"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1f63401297565d74afb96e9add12587d8e46235140cee325a8eb6ba4602f4ee"
+dependencies = [
+ "ahash",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "shaderc",
+ "syn 2.0.39",
+ "vulkano",
+]
+
+[[package]]
 name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -616,6 +680,12 @@ name = "xml-rs"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fcb9cbac069e033553e8bb871be2fbdffcab578eb25bd0f7c508cedc6dcd75a"
+
+[[package]]
+name = "xmlparser"
+version = "0.13.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
 
 [[package]]
 name = "zerocopy"
