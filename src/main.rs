@@ -1,6 +1,6 @@
  use std::process::Command;
 use std::sync::Arc;
-use vulkano::VulkanLibrary;
+use vulkano::{VulkanLibrary, descriptor_set};
 use vulkano::instance::{Instance, InstanceCreateInfo};
 use vulkano::device::{Device, DeviceCreateInfo, QueueCreateInfo, QueueFlags};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
@@ -13,7 +13,9 @@ use vulkano::sync::{self, GpuFuture};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
-
+use vulkano::pipeline::Pipeline;
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 
 fn main() {
    
@@ -54,8 +56,17 @@ fn main() {
     .expect("failed to create device");
     
     let queue = queues.next().unwrap();
-    let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
     
+    // Create allocators
+    let memory_allocator = Arc::new(StandardMemoryAllocator::new_default(device.clone()));
+     let command_buffer_allocator = StandardCommandBufferAllocator::new(
+        device.clone(),
+        StandardCommandBufferAllocatorCreateInfo::default(),
+    );
+    let descriptor_set_allocator = 
+                StandardDescriptorSetAllocator::new(device.clone(), Default::default());
+
+
     let data_iter = 0..65536u32;
     let data_buffer = Buffer::from_iter(
             memory_allocator.clone(),
@@ -112,10 +123,20 @@ fn main() {
     )
     .expect("Failed to create compute pipeline");
 
-    let command_buffer_allocator = StandardCommandBufferAllocator::new(
-        device.clone(),
-        StandardCommandBufferAllocatorCreateInfo::default(),
-    );
+   
+    let pipeline_layout = compute_pipeline.layout();
+    let descriptor_set_layouts = pipeline_layout.set_layouts();
+    let descriptor_set_layout_index = 0;
+    let descriptor_set_layout = descriptor_set_layouts
+                                                                .get(descriptor_set_layout_index)
+                                                                .unwrap();
+    let descriptor_set = PersistentDescriptorSet::new(
+        &descriptor_set_allocator,
+        descriptor_set_layout.clone(),
+        [WriteDescriptorSet::buffer(0, data_buffer.clone())],
+        [],
+    )
+    .unwrap();
 
     let mut builder = AutoCommandBufferBuilder::primary(
         &command_buffer_allocator,
