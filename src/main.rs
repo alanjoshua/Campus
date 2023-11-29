@@ -8,7 +8,8 @@ use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, BufferContents};
 use vulkano::command_buffer::allocator::{
     StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo,
 };
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, ClearColorImageInfo, CopyImageToBufferInfo};
+use vulkano::pipeline::PipelineBindPoint;
 use vulkano::sync::{self, GpuFuture};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
@@ -16,6 +17,12 @@ use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCrea
 use vulkano::pipeline::Pipeline;
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
+
+use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
+use vulkano::format::{Format, ClearColorValue};
+
+use image::{ImageBuffer, Rgba};
+
 
 fn main() {
    
@@ -83,6 +90,36 @@ fn main() {
     )
     .expect("failed to create buffer");
 
+    let image = Image::new(
+        memory_allocator.clone(),
+        ImageCreateInfo {
+            image_type: ImageType::Dim2d,
+            format: Format::R8G8B8A8_UNORM,
+            extent: [1024, 1024, 1],
+            usage: ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC,
+            ..Default::default()
+        },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    let buf = Buffer::from_iter(
+        memory_allocator.clone(),
+        BufferCreateInfo {
+            usage: BufferUsage::TRANSFER_DST,
+            ..Default::default()
+        },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_RANDOM_ACCESS,
+            ..Default::default()
+        },
+        (0..1024 * 1024 * 4).map(|_| 0u8),
+    )
+    .expect("failed to create buffer");
+
     mod cs {
     vulkano_shaders::shader!{
         ty: "compute",
@@ -138,15 +175,50 @@ fn main() {
     )
     .unwrap();
 
+    // let mut command_buffer_builder = AutoCommandBufferBuilder::primary(
+    //     &command_buffer_allocator,
+    //     queue_family_index,
+    //     CommandBufferUsage::OneTimeSubmit,
+    // )
+    // .unwrap();
+
+    // let work_group_counts = [1024, 1, 1];
+
+    // command_buffer_builder
+    //     .bind_pipeline_compute(compute_pipeline.clone())
+    //     .unwrap()
+    //     .bind_descriptor_sets(
+    //         PipelineBindPoint::Compute,
+    //         compute_pipeline.layout().clone(),
+    //         descriptor_set_layout_index as u32,
+    //         descriptor_set,
+    //     )
+    //     .unwrap()
+    //     .dispatch(work_group_counts)
+    //     .unwrap();
+
+    // let command_buffer = command_buffer_builder.build().unwrap();
+
     let mut builder = AutoCommandBufferBuilder::primary(
-        &command_buffer_allocator,
-        queue_family_index,
-        CommandBufferUsage::OneTimeSubmit,
+        &command_buffer_allocator, 
+        queue.queue_family_index(), 
+    CommandBufferUsage::OneTimeSubmit,
     )
     .unwrap();
 
-    let command_buffer = builder.build().unwrap();
-
+    builder
+        .clear_color_image(ClearColorImageInfo {
+            clear_value: ClearColorValue::Float([0.0, 0.0, 1.0, 1.0]),
+            ..ClearColorImageInfo::image(image.clone())
+        })
+        .unwrap()
+        .copy_image_to_buffer(CopyImageToBufferInfo::image_buffer(
+            image.clone(),
+            buf.clone(),
+        ))
+        .unwrap();
+    
+    let command_buffer = builder.build().unwrap();    
     let future = sync::now(device.clone())
             .then_execute(queue.clone(), command_buffer)
             .unwrap()
@@ -154,5 +226,15 @@ fn main() {
             .unwrap();
 
     future.wait(None).unwrap();
+
+    let buffer_content = buf.read().unwrap();
+    let image = ImageBuffer::<Rgba<u8>, _>::from_raw(1024, 1024, &buffer_content[..]).unwrap();
+    
+    image.save("image.png").unwrap();
+    // let content = data_buffer.read().unwrap();
+    // for (n, val) in content.iter().enumerate() {
+    //     assert_eq!(*val, n as u32 * 12);
+    // }
+    // println!("Success!")
 
 }
